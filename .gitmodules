@@ -112,3 +112,6 @@
 [submodule "freedom-metal"]
 	path = freedom-metal
 	url = git@github.com:SiFiveGregS/freedom-metal.git
+[submodule "mri"]
+	path = mri
+	url = git@github.com:SiFiveGregS/mri.git
