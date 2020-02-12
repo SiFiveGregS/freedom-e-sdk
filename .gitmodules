@@ -109,3 +109,6 @@
 [submodule "software/example-freertos-blinky"]
 	path = software/example-freertos-blinky
 	url = https://github.com/sifive/example-freertos-blinky.git
+[submodule "freedom-metal"]
+	path = freedom-metal
+	url = git@github.com:SiFiveGregS/freedom-metal.git
