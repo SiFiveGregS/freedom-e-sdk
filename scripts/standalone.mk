@@ -8,6 +8,9 @@ BSP_DIR ?= $(abspath bsp)
 SRC_DIR ?= $(abspath src)
 # FREERTOS_SOURCE_PATH sets the path to the FreeRTOS source directory
 export FREERTOS_SOURCE_PATH = $(abspath FreeRTOS-metal)
+# MRI_DIR sets the path to the Monitor for Remote Inspection source directory
+MRI_DIR ?= $(abspath mri)
+
 
 #############################################################
 # BSP loading
@@ -128,9 +131,10 @@ RISCV_LDFLAGS += -Wl,-Map,$(PROGRAM).map
 RISCV_LDFLAGS += -nostartfiles -nostdlib
 # Find the archive files and linker scripts
 RISCV_LDFLAGS += -L$(sort $(dir $(abspath $(filter %.a,$^)))) -T$(abspath $(filter %.lds,$^))
+RISCV_LDFLAGS += -L$(MRI_DIR)/lib/riscv
 
 # Link to the relevant libraries
-RISCV_LDLIBS += -Wl,--start-group -lc -lgcc -lm -lmetal -lmetal-gloss -Wl,--end-group
+RISCV_LDLIBS += -Wl,--start-group -lc -lgcc -lm -lmetal -lmetal-gloss -lmri-riscv -Wl,--end-group
 
 # Load the configuration Makefile
 CONFIGURATION_FILE = $(wildcard $(CONFIGURATION).mk)
