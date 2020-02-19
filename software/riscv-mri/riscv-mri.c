@@ -45,9 +45,7 @@ void uart0_isr (int id, void *data) {
     printf("Got Uart 0 interrupt. Toggle Red LED.\n");
     metal_led_toggle((struct metal_led *)data);
     //    debounce();
-    __asm__ volatile("ebreak");    
     result = metal_uart_getc(uart0, &ch);
-    for (;;) {}
     if (result == 0 && ch != -1) {
       printf("Received char: 0x%x\n", ch);
     }
