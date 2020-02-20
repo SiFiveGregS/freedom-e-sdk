@@ -44,11 +44,13 @@ void uart0_isr (int id, void *data) {
     
     printf("Got Uart 0 interrupt. Toggle Red LED.\n");
     metal_led_toggle((struct metal_led *)data);
-    //    debounce();
+#if 0
     result = metal_uart_getc(uart0, &ch);
     if (result == 0 && ch != -1) {
       printf("Received char: 0x%x\n", ch);
     }
+#endif
+    __mriDebugException();
 }
 
 int main (void)
