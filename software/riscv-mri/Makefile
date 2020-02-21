@@ -3,7 +3,7 @@
 
 PROGRAM ?= riscv-mri
 
-override CFLAGS += -Xlinker --defsym=__stack_size=0x800
+override CFLAGS += -Xlinker --defsym=__stack_size=0x800 -I ../../mri/include
 
 $(PROGRAM): $(wildcard *.c) $(wildcard *.h) $(wildcard *.S)
 

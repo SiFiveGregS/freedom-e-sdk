@@ -7,6 +7,9 @@
 #include <metal/uart.h>
 #include <metal/machine.h>
 
+#include "mri.h"
+void __mriDebugException(void);  // Not sure why this isn't in an MRI header file (probably an oversight)
+
 #define RTC_FREQ	32768
 
 struct metal_cpu *cpu;
@@ -60,6 +63,7 @@ int main (void)
     struct metal_uart *uart0;
     size_t txcnt;
 
+    __mriInit("");  // For RISC-V, not using any argument string (at this time)
 
     // Lets get start with getting LEDs and turn only RED ON
     led0_red = metal_led_get_rgb("LD0", "red");
