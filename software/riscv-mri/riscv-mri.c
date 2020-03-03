@@ -17,43 +17,14 @@ struct metal_interrupt *cpu_intr, *tmr_intr;
 struct metal_interrupt *uart0_ic;
 int tmr_id, uart0_irq;
 
-void display_instruction (void) {
-    printf("\n");
-    printf("SIFIVE, INC.\n!!\n");
-    printf("\n");
-    printf("Coreplex IP Eval Kit 'uart-interrupt' Example.\n\n");
-    printf("A 1s debounce timer is used between these interupts.\n");
-    printf("\n");
-}
-
-void timer_isr (int id, void *data) {
-    // Disable Timer interrupt
-    metal_interrupt_disable(tmr_intr, tmr_id);
-    printf("Awaken\n");
-}
-
-void debounce (void) {
-    printf("Sleep for 10s more secs\n");
-    metal_cpu_set_mtimecmp(cpu, metal_cpu_get_mtime(cpu) + RTC_FREQ);
-
-    // Enable Timer interrupt
-    metal_interrupt_enable(tmr_intr, tmr_id);
-}
-
 void uart0_isr (int id, void *data) {
     struct metal_uart *uart0 = metal_uart_get_device(0);
     int result;
     int ch;
     
-    printf("Got Uart 0 interrupt. Toggle Red LED.\n");
-    metal_led_toggle((struct metal_led *)data);
-#if 0
-    result = metal_uart_getc(uart0, &ch);
-    if (result == 0 && ch != -1) {
-      printf("Received char: 0x%x\n", ch);
-    }
-#endif
+    metal_led_on((struct metal_led *)data);
     __mriDebugException();
+    metal_led_off((struct metal_led *)data);    
 }
 
 int main (void)
@@ -62,6 +33,7 @@ int main (void)
     struct metal_led *led0_red;
     struct metal_uart *uart0;
     size_t txcnt;
+    int baud_rate;
 
     __mriInit("");  // For RISC-V, not using any argument string (at this time)
 
@@ -72,7 +44,6 @@ int main (void)
         return 1;
     }
     metal_led_enable(led0_red);
-    metal_led_on(led0_red);
  
     // Lets get the CPU and and its interrupt
     cpu = metal_cpu_get(metal_cpu_get_current_hartid());
@@ -87,24 +58,10 @@ int main (void)
     }
     metal_interrupt_init(cpu_intr);
 
-#if 0
-    // Setup Timer and its interrupt
-    tmr_intr = metal_cpu_timer_interrupt_controller(cpu);
-    if (tmr_intr == NULL) {
-        printf("TIMER interrupt controller is  null.\n");
-        return 4;
-    }
-    metal_interrupt_init(tmr_intr);
-    tmr_id = metal_cpu_timer_get_interrupt_id(cpu);
-    rc = metal_interrupt_register_handler(tmr_intr, tmr_id, timer_isr, cpu);
-    if (rc < 0) {
-        printf("TIMER interrupt handler registration failed\n");
-        return (rc * -1);
-    }
-#endif    
-
     // Setup UART 0 and its interrupt
     uart0 = metal_uart_get_device(0);
+    metal_uart_set_baud_rate(uart0, 19200);
+    baud_rate = metal_uart_get_baud_rate(uart0);    
     uart0_ic = metal_uart_interrupt_controller(uart0);
     if (uart0_ic == NULL) {
         printf("UART0 interrupt controller is null.\n");
@@ -122,7 +79,6 @@ int main (void)
     txcnt =  metal_uart_get_transmit_watermark(uart0);
     metal_uart_set_transmit_watermark(uart0, 1);
     // metal_uart_transmit_interrupt_enable(uart0);
-    display_instruction();
     if (metal_interrupt_enable(uart0_ic, uart0_irq) == -1) {
         printf("Uart0 interrupt enable failed\n");
         return 5;
