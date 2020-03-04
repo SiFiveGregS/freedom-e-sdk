@@ -60,7 +60,7 @@ int main (void)
 
     // Setup UART 0 and its interrupt
     uart0 = metal_uart_get_device(0);
-    metal_uart_set_baud_rate(uart0, 19200);
+    metal_uart_set_baud_rate(uart0, 19200);   // 4800 seems to work, trying higher baud rates though
     baud_rate = metal_uart_get_baud_rate(uart0);    
     uart0_ic = metal_uart_interrupt_controller(uart0);
     if (uart0_ic == NULL) {
