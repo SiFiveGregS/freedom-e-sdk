@@ -1,16 +1,74 @@
 #include "platforms.h"
 #include "mri_platform_freedom_metal.h"
 #include <metal/uart.h>
+#include <string.h>
 
 #define DISABLE_APPARENTLY_ARM_SPECIFIC_CODE 1
 
 static struct metal_uart *uart0;
 
 /* Freedom Metal doesn't expose the RX_EMPTY bit independently of the return status
-   when trying to consume a character, so we'll buffer zero or one characters here.  If this
-   scheme is problematic, then we could hack Freedom Metal to expose the RX_EMPTY somehow. */
-static int uart0_input_lookahead = -1;  /* -1 means "none", otherwise a character value */
+   when trying to consume a character, so we have to buffer at least one character,
+   and depending on baud rate we might need to buffer more to prevent data loss, but
+   for now, we'll just try buffer of depth 1 and if we do need more, then bumping up
+   UART_BUF_SIZE may be sufficient */
 
+#define UART_BUF_SIZE 1
+typedef struct {
+  int num_bytes;
+  int rp;
+  int wp;
+  char buf[UART_BUF_SIZE];
+} UART_BUFFER;
+
+void UartBufferInit(UART_BUFFER *p);
+int UartBufferEmpty(UART_BUFFER *p);
+int UartBufferFull(UART_BUFFER *p);
+int UartBufferRead(UART_BUFFER *p);
+int UartBufferWrite(UART_BUFFER *p, int ch);
+
+void UartBufferInit(UART_BUFFER *p) {
+  p->num_bytes = 0;
+  p->rp = 0;
+  p->wp = 0;
+  memset(p->buf, 0, sizeof(p->buf));
+}
+
+int UartBufferEmpty(UART_BUFFER *p) {
+  return p->num_bytes == 0;
+}
+
+int UartBufferFull(UART_BUFFER *p) {
+  return p->num_bytes == sizeof(p->buf);
+}
+
+int UartBufferRead(UART_BUFFER *p) {
+  if (p->num_bytes == 0) {
+    return -1;
+  } else {
+    int c = p->buf[p->rp];    
+    p->rp++;
+    if (p->rp == sizeof(p->buf))
+      p->rp = 0;
+    p->num_bytes--;
+    return c;
+  }
+}
+
+int UartBufferWrite(UART_BUFFER *p, int ch) {
+  if (p->num_bytes == sizeof(p->buf))
+    return -1;
+  
+  p->buf[p->wp] = ch;
+  p->wp++;
+  p->num_bytes++;
+  if (p->wp == sizeof(p->buf))
+    p->wp = 0;
+  return 0;
+}
+
+
+static UART_BUFFER uart_buffer;
 static int waiting_for_gdb_to_connect;
 
 static int      shouldRemoveHardwareBreakpointOnSvcHandler(void);
@@ -29,7 +87,7 @@ static void     saveOriginalMpuConfiguration(void);
 void Platform_Init(Token* pParameterTokens)
 {
   uart0 = metal_uart_get_device(0);
-  uart0_input_lookahead = -1;
+  UartBufferInit(&uart_buffer);
   waiting_for_gdb_to_connect = 1;
 }
 
@@ -42,10 +100,9 @@ int Platform_CommReceiveChar(void)
   while (!Platform_CommHasReceiveData()) {
     /* spin */
   }
-  /* When we get here, we are guaranteed to have a character in lookahead.
-     Consume and return it */
-  c = uart0_input_lookahead;
-  uart0_input_lookahead = -1;
+  /* When we get here, we are guaranteed to have at least one character in the buffer.
+     Consume and return the oldest unconsumed character from the buffer */
+  c = UartBufferRead(&uart_buffer);
   
   return c;
 }
@@ -83,14 +140,18 @@ uint32_t Platform_CommHasReceiveData(void)
   int result;
   int c;
   
-  if (uart0_input_lookahead == -1) {
-    /* Try to get one character without blocking */
+  if (UartBufferEmpty(&uart_buffer)) {
+    /* Try to slurp in as many immediately available bytes as we can get (and will fit in our buffer) */
+    while (!UartBufferFull(&uart_buffer)) {
       result = metal_uart_getc(uart0, &c);
-      if (result == 0) {
-	uart0_input_lookahead = c;
+      if (result == 0 && c != -1) {
+	UartBufferWrite(&uart_buffer, c);
+      } else {
+	break;
       }
+    }
   }
-  return (uart0_input_lookahead != -1);
+  return (!UartBufferEmpty(&uart_buffer));
 }
 
 void Platform_CommClearInterrupt(void)
