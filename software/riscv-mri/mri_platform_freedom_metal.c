@@ -6,6 +6,7 @@
 #define DISABLE_APPARENTLY_ARM_SPECIFIC_CODE 1
 
 static struct metal_uart *uart0;
+MRI_CONTEXT_RISCV mri_context;
 
 /* Freedom Metal doesn't expose the RX_EMPTY bit independently of the return status
    when trying to consume a character, so we have to buffer at least one character,
