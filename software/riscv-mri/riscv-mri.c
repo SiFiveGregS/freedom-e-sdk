@@ -33,10 +33,6 @@ void uart0_isr (int id, void *data) {
 }
 
 
-void exception_handler_mem_fault(struct metal_cpu *cpu, int ecode) {
-  call_mri(0);
-}
-
 int main (void)
 {
     int rc;
@@ -83,9 +79,6 @@ int main (void)
         printf("Uart0 interrupt handler registration failed\n");
         return (rc * -1);
     }
-
-    rc = metal_cpu_exception_register(cpu, 0x5, exception_handler_mem_fault);
-    
 
     // Lets enable the Uart interrupt
     txcnt =  metal_uart_get_transmit_watermark(uart0);
