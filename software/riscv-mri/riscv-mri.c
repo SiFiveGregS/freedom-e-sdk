@@ -9,28 +9,37 @@
 
 #include "mri.h"
 void __mriDebugException(void);  // Not sure why this isn't in an MRI header file (probably an oversight)
+void Platform_setMemoryFaultFlag(void);
 
 #define RTC_FREQ	32768
 
 struct metal_cpu *cpu;
 struct metal_interrupt *cpu_intr, *tmr_intr;
 struct metal_interrupt *uart0_ic;
+struct metal_led *led0_red;
 int tmr_id, uart0_irq;
 
-void uart0_isr (int id, void *data) {
-    struct metal_uart *uart0 = metal_uart_get_device(0);
-    int result;
-    int ch;
-    
-    metal_led_on((struct metal_led *)data);
+
+void call_mri(int tickle_led) {
+    if (tickle_led)
+      metal_led_on(led0_red);
     __mriDebugException();
-    metal_led_off((struct metal_led *)data);    
+    if (tickle_led)    
+      metal_led_off(led0_red);    
+}
+
+void uart0_isr (int id, void *data) {
+    call_mri(1);
+}
+
+
+void exception_handler_mem_fault(struct metal_cpu *cpu, int ecode) {
+  Platform_setMemoryFaultFlag();  
 }
 
 int main (void)
 {
     int rc;
-    struct metal_led *led0_red;
     struct metal_uart *uart0;
     size_t txcnt;
     int baud_rate;
@@ -74,6 +83,9 @@ int main (void)
         printf("Uart0 interrupt handler registration failed\n");
         return (rc * -1);
     }
+
+    rc = metal_cpu_exception_register(cpu, 0x5, exception_handler_mem_fault);
+    
 
     // Lets enable the Uart interrupt
     txcnt =  metal_uart_get_transmit_watermark(uart0);

@@ -118,8 +118,10 @@ int Platform_CommCausedInterrupt(void)
   // correct for a particular board, this implementation may need refinement.
   RISCV_X_VAL interrupt_mask = (((RISCV_X_VAL)1) << (__riscv_xlen-1));
   RISCV_X_VAL exception_code_mask = interrupt_mask-1;
-  int is_interrupt = ((mri_context.mcause & interrupt_mask) != 0);
-  int code = (mri_context.mcause & exception_code_mask);
+  RISCV_X_VAL mcause = mri_context.mcause;
+
+  int is_interrupt = ((mcause & interrupt_mask) != 0);
+  int code = (mcause & exception_code_mask);
 
   return (is_interrupt && code == 11);
 }
@@ -221,10 +223,7 @@ void Platform_EnteringDebugger(void)
 
 static void clearMemoryFaultFlag(void)
 {
-#ifndef DISABLE_APPARENTLY_ARM_SPECIFIC_CODE
-    __mriCortexMState.flags &= ~CORTEXM_FLAGS_FAULT_DURING_DEBUG;
-#else
-#endif  
+  mri_context.flags &= ~MRI_CONTEXT_FLAG_MEM_FAULT;
 }
 
 static void cleanupIfSingleStepping(void)
@@ -329,16 +328,16 @@ static void saveOriginalMpuConfiguration(void)
 #endif  
 }
 
+void Platform_setMemoryFaultFlag(void)
+{
+  mri_context.flags |= MRI_CONTEXT_FLAG_MEM_FAULT;
+}
+
 int Platform_WasMemoryFaultEncountered(void)
 {
     int wasFaultEncountered;
 
-#ifndef DISABLE_APPARENTLY_ARM_SPECIFIC_CODE    
-    __DSB();
-    wasFaultEncountered = __mriCortexMState.flags & CORTEXM_FLAGS_FAULT_DURING_DEBUG;
-#else
-    wasFaultEncountered = 0; // implement for RISC-V
-#endif    
+    wasFaultEncountered = (mri_context.flags & MRI_CONTEXT_FLAG_MEM_FAULT) != 0;
     clearMemoryFaultFlag();
     
     return wasFaultEncountered;    
