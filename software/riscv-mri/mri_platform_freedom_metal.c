@@ -118,7 +118,7 @@ int Platform_CommCausedInterrupt(void)
   // correct for a particular board, this implementation may need refinement.
   RISCV_X_VAL interrupt_mask = (((RISCV_X_VAL)1) << (__riscv_xlen-1));
   RISCV_X_VAL exception_code_mask = interrupt_mask-1;
-  RISCV_X_VAL mcause = mri_context.mcause;
+  RISCV_X_VAL mcause = __mriRiscVState.context.mcause;  
 
   int is_interrupt = ((mcause & interrupt_mask) != 0);
   int code = (mcause & exception_code_mask);
@@ -223,7 +223,7 @@ void Platform_EnteringDebugger(void)
 
 static void clearMemoryFaultFlag(void)
 {
-  mri_context.flags &= ~MRI_CONTEXT_FLAG_MEM_FAULT;
+  __mriRiscVState.context.flags &= ~MRI_CONTEXT_FLAG_MEM_FAULT;
 }
 
 static void cleanupIfSingleStepping(void)
@@ -330,14 +330,14 @@ static void saveOriginalMpuConfiguration(void)
 
 void Platform_setMemoryFaultFlag(void)
 {
-  mri_context.flags |= MRI_CONTEXT_FLAG_MEM_FAULT;
+  __mriRiscVState.context.flags |= MRI_CONTEXT_FLAG_MEM_FAULT;
 }
 
 int Platform_WasMemoryFaultEncountered(void)
 {
     int wasFaultEncountered;
 
-    wasFaultEncountered = (mri_context.flags & MRI_CONTEXT_FLAG_MEM_FAULT) != 0;
+    wasFaultEncountered = (__mriRiscVState.context.flags & MRI_CONTEXT_FLAG_MEM_FAULT) != 0;
     clearMemoryFaultFlag();
     
     return wasFaultEncountered;    
