@@ -223,7 +223,7 @@ void Platform_EnteringDebugger(void)
 
 static void clearMemoryFaultFlag(void)
 {
-  __mriRiscVState.context.flags &= ~MRI_CONTEXT_FLAG_MEM_FAULT;
+  __mriRiscVState.flags &= ~MRI_RISCV_FLAG_REENTERED;
 }
 
 static void cleanupIfSingleStepping(void)
@@ -328,17 +328,13 @@ static void saveOriginalMpuConfiguration(void)
 #endif  
 }
 
-void Platform_setMemoryFaultFlag(void)
-{
-  __mriRiscVState.context.flags |= MRI_CONTEXT_FLAG_MEM_FAULT;
-}
-
 int Platform_WasMemoryFaultEncountered(void)
 {
     int wasFaultEncountered;
 
-    wasFaultEncountered = (__mriRiscVState.context.flags & MRI_CONTEXT_FLAG_MEM_FAULT) != 0;
-    clearMemoryFaultFlag();
+    wasFaultEncountered = (__mriRiscVState.flags & MRI_RISCV_FLAG_REENTERED) != 0 && __mriRiscVState.context.reentered_mcause == 0x5;
+    if (wasFaultEncountered)
+      clearMemoryFaultFlag();
     
     return wasFaultEncountered;    
 }

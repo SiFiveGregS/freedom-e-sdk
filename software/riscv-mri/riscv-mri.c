@@ -34,7 +34,7 @@ void uart0_isr (int id, void *data) {
 
 
 void exception_handler_mem_fault(struct metal_cpu *cpu, int ecode) {
-  Platform_setMemoryFaultFlag();  
+  call_mri(0);
 }
 
 int main (void)
