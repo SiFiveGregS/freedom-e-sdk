@@ -32,6 +32,19 @@ void uart0_isr (int id, void *data) {
     call_mri(1);
 }
 
+void user_demo_function(void) {
+  /* Just a simple placeholder representing some user application outside of the scope of the
+     debug agent code */
+  volatile int count = 0;
+  volatile int count_div_256 = 0;  
+
+  for (;;) {
+    count++;
+    if ((count & 0x1FF) == 0x100) {
+      count_div_256++;
+    }
+  }
+}
 
 int main (void)
 {
@@ -99,9 +112,13 @@ int main (void)
     metal_uart_receive_interrupt_enable(uart0);
     //display_instruction();
 
+#if 0    
     while (1) {
         __asm__ volatile("wfi");
     }
+#endif
+
+    user_demo_function();
 
     return 0;
 }
