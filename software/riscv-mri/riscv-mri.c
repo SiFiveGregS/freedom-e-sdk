@@ -32,6 +32,10 @@ void uart0_isr (int id, void *data) {
     call_mri(1);
 }
 
+void breakpoint_isr(struct metal_cpu *cpu, int ecode) {
+    call_mri(1);
+}
+
 void user_demo_function(void) {
   /* Just a simple placeholder representing some user application outside of the scope of the
      debug agent code */
@@ -90,6 +94,12 @@ int main (void)
     rc = metal_interrupt_register_handler(uart0_ic, uart0_irq, uart0_isr, led0_red);
     if (rc < 0) {
         printf("Uart0 interrupt handler registration failed\n");
+        return (rc * -1);
+    }
+
+    rc = metal_cpu_exception_register(cpu, 0x3, breakpoint_isr);
+    if (rc < 0) {
+        printf("Break exception handler registration failed\n");
         return (rc * -1);
     }
 
