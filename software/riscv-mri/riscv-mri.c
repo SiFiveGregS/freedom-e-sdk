@@ -40,12 +40,12 @@ void user_demo_function(void) {
   /* Just a simple placeholder representing some user application outside of the scope of the
      debug agent code */
   volatile int count = 0;
-  volatile int count_div_256 = 0;  
+  volatile int count_div_512 = 0;  
 
   for (;;) {
     count++;
     if ((count & 0x1FF) == 0x100) {
-      count_div_256++;
+      count_div_512++;
     }
   }
 }
