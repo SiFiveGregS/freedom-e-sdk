@@ -159,8 +159,12 @@ uint32_t Platform_CommHasReceiveData(void)
 
 void Platform_CommClearInterrupt(void)
 {
-  // From porting guide: Platform_CommClearInterrupt() | Clear any active UART interrupts. |
-  // For this implementation (the one using Freedom Metal), Freedom Metal is doing this further up the call stack
+  /* Freedom Metal will have already done this when it called
+     __metal_plic0_claim_interrupt(), via __metal_plic0_handler() */
+
+  /* However, we do need to set the exit flag, otherwise the pre-entry state
+     doesn't get restored exactly the same as it was */
+    __mriRiscVState.flags |= MRI_RISCV_FLAG_EXITING;  
 }
 
 int Platform_CommIsWaitingForGdbToConnect(void)
