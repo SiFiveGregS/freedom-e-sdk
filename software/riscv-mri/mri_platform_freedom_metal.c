@@ -3,8 +3,6 @@
 #include <metal/uart.h>
 #include <string.h>
 
-#define DISABLE_APPARENTLY_ARM_SPECIFIC_CODE 1
-
 static struct metal_uart *uart0;
 
 
@@ -72,18 +70,9 @@ int UartBufferWrite(UART_BUFFER *p, int ch) {
 static UART_BUFFER uart_buffer;
 static int waiting_for_gdb_to_connect;
 
-static int      shouldRemoveHardwareBreakpointOnSvcHandler(void);
-static void     removeHardwareBreakpointOnSvcHandlerIfNeeded(void);
 static void     clearMemoryFaultFlag(void);
 static void     cleanupIfSingleStepping(void);
-static void     clearHardwareBreakpointOnSvcHandler(void);
 static void     clearSvcStepFlag(void);
-static void     restoreBasePriorityIfNeeded(void);
-static void     configureMpuToAccessAllMemoryWithNoCaching(void);
-static void enableMPUWithHardAndNMIFaults(void);
-static void     configureHighestMpuRegionToAccessAllMemoryWithNoCaching(void);
-static void disableMPU(void);
-static void     saveOriginalMpuConfiguration(void);
 
 void Platform_Init(Token* pParameterTokens)
 {
@@ -216,11 +205,7 @@ const char* Platform_GetDeviceMemoryMapXml(void)
 void Platform_EnteringDebugger(void)
 {
     clearMemoryFaultFlag();
-#ifndef DISABLE_APPARENTLY_ARM_SPECIFIC_CODE
-    __mriCortexMState.originalPC = __mriCortexMState.context.PC;    
-#else
-#endif  
-    configureMpuToAccessAllMemoryWithNoCaching();
+    __mriRiscVState.originalPC = __mriRiscVState.context.mepc;
     cleanupIfSingleStepping();
 }
 
@@ -232,105 +217,11 @@ static void clearMemoryFaultFlag(void)
 
 static void cleanupIfSingleStepping(void)
 {
-    restoreBasePriorityIfNeeded();
-    removeHardwareBreakpointOnSvcHandlerIfNeeded();
     Platform_DisableSingleStep();
 }
 
 
-static void removeHardwareBreakpointOnSvcHandlerIfNeeded(void)
-{
-    if (shouldRemoveHardwareBreakpointOnSvcHandler())
-    {
-        clearSvcStepFlag();
-        clearHardwareBreakpointOnSvcHandler();
-    }
-}
 
-static int shouldRemoveHardwareBreakpointOnSvcHandler(void)
-{
-#ifndef DISABLE_APPARENTLY_ARM_SPECIFIC_CODE
-    return __mriCortexMState.flags & CORTEXM_FLAGS_SVC_STEP;  
-#else
-    return 0;  /* implement, if needed for RISC-V */    
-#endif  
-}
-
-static void clearHardwareBreakpointOnSvcHandler(void)
-{
-#ifndef DISABLE_APPARENTLY_ARM_SPECIFIC_CODE
-    Platform_ClearHardwareBreakpoint(getNvicVector(SVCall_IRQn) & ~1, 2);
-#else
-#endif  
-}
-
-
-static void clearSvcStepFlag(void)
-{
-#ifndef DISABLE_APPARENTLY_ARM_SPECIFIC_CODE
-    __mriCortexMState.flags &= ~CORTEXM_FLAGS_SVC_STEP;
-#else
-#endif  
-}
-
-static void restoreBasePriorityIfNeeded(void)
-{
-#ifndef DISABLE_APPARENTLY_ARM_SPECIFIC_CODE  
-    if (shouldRestoreBasePriority())
-    {
-        clearRestoreBasePriorityFlag();
-        __set_BASEPRI(__mriCortexMState.originalBasePriority);
-        __mriCortexMState.originalBasePriority = 0;
-    }
-#endif    
-}
-
-static void configureMpuToAccessAllMemoryWithNoCaching(void)
-{
-    saveOriginalMpuConfiguration();
-    disableMPU();
-    configureHighestMpuRegionToAccessAllMemoryWithNoCaching();    
-    enableMPUWithHardAndNMIFaults();
-}
-
-static void enableMPUWithHardAndNMIFaults(void)
-{
-    // RESOLVE - implement for RISC-V
-}
-
-
-static void configureHighestMpuRegionToAccessAllMemoryWithNoCaching(void)
-{
-#ifndef DISABLE_APPARENTLY_ARM_SPECIFIC_CODE
-    static const uint32_t regionToStartAtAddress0 = 0U;
-    static const uint32_t regionReadWrite = 1  << MPU_RASR_AP_SHIFT;
-    static const uint32_t regionSizeAt4GB = 31 << MPU_RASR_SIZE_SHIFT; /* 4GB = 2^(31+1) */
-    static const uint32_t regionEnable    = MPU_RASR_ENABLE;
-    static const uint32_t regionSizeAndAttributes = regionReadWrite | regionSizeAt4GB | regionEnable;
-    
-    prepareToAccessMPURegion(getHighestMPUDataRegionIndex());
-    setMPURegionAddress(regionToStartAtAddress0);
-    setMPURegionAttributeAndSize(regionSizeAndAttributes);
-#else
-#endif  
-}
-
-static void disableMPU(void)
-{
-    // RESOLVE - implement for RISC-V
-}
-
-static void saveOriginalMpuConfiguration(void)
-{
-#ifndef DISABLE_APPARENTLY_ARM_SPECIFIC_CODE
-    __mriCortexMState.originalMPUControlValue = getMPUControlValue();
-    __mriCortexMState.originalMPURegionNumber = getCurrentMPURegionNumber();
-    prepareToAccessMPURegion(getHighestMPUDataRegionIndex());
-    __mriCortexMState.originalMPURegionAddress = getMPURegionAddress();
-    __mriCortexMState.originalMPURegionAttributesAndSize = getMPURegionAttributeAndSize();
-#else
-#endif  
-}
 
 int Platform_WasMemoryFaultEncountered(void)
 {
