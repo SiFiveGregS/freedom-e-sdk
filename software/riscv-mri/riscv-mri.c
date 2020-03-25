@@ -8,6 +8,7 @@
 #include <metal/machine.h>
 
 #include "mri.h"
+#include "riscv.h"
 void __mriDebugException(void);  // Not sure why this isn't in an MRI header file (probably an oversight)
 void Platform_setMemoryFaultFlag(void);
 
@@ -58,6 +59,7 @@ int main (void)
     int baud_rate;
 
     __mriInit("");  // For RISC-V, not using any argument string (at this time)
+    __mriRiscVInit(NULL);
 
     // Lets get start with getting LEDs and turn only RED ON
     led0_red = metal_led_get_rgb("LD0", "red");
