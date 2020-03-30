@@ -38,3 +38,43 @@ For porting to other RISC-V boards, if it's easier to localize all the customiza
 under the mri subtree, under mri/architectures/riscv, mri/boards, and mri/devices, that
 might be the cleanest way.  For Freedom E SDK and Freedom Metal, it wasn't clear how to
 easily achieve that sort of structure, hence the pragmatic set of steps above.
+
+******************************************************************************************
+What would need to be done to adapt this software to a RISC-V software environment that is
+something other than Freedom Metal (e.g. an RTOS)?
+******************************************************************************************
+
+1) Given whatever I/O conduit you choose to use for host/target debugger communication, arrange
+for that I/O channel to generate a high priority interrupt upon incoming transmission.  Note that
+any code that runs as a result of any interrupt that runs at a higher priority than that of the
+debug I/O channel will not be debuggable in this arrangement.
+
+2) Supply an analogue for the assembly routines mri_exception_entry and mri_exception_exit that
+are in riscv_mri.S. The mri_exception_entry implementation should save off x1..x31, mepc, mcause,
+and mstatus, into __mriRiscVState, set the active flag in __mriRiscVState, and ultimately make a
+call to __mriDebugException which is part of MRI proper.  (Basically, do the equivalent of things
+that mri_exception_entry is doing). After __mriDebugException returns, mri_exception_exit should
+take the previously saved register values in __mriRiscVState, and place them back into the machine
+registers, before ultimately executing an MRET instruction to return control to the program being
+debugged.
+
+3) Analyze all non-static functions prefixed with "Platform_" in
+software/riscv-mri/mri_platform_freedom_metal.c, and either copy them verbatim, or re-implement
+the ones that don't fit your situation.  The following functions are likely directly portable to
+non-Freedom-Metal environments:
+Platform_CommCausedInterrupt
+Platform_CommShouldWaitForGdbConnect
+Platform_CommIsWaitingForGdbToConnec
+Platform_CommWaitForReceiveDataToStop
+Platform_EnteringDebugger
+Platform_WasMemoryFaultEncountered
+
+These functions may need to be re-implemented or adjusted for non-Freedom-Metal environments:
+Platform_CommClearInterrupt
+
+These functions almost surely need to be re-implemented for non-Freedom-Metal environments:
+Platform_Init
+Platform_CommHasReceiveData
+Platform_CommReceiveChar
+Platform_CommSendChar
+
