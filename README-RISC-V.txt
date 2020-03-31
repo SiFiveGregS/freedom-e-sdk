@@ -58,7 +58,13 @@ take the previously saved register values in __mriRiscVState, and place them bac
 registers, before ultimately executing an MRET instruction to return control to the program being
 debugged.
 
-3) Analyze all non-static functions prefixed with "Platform_" in
+3) Arrange for debug I/O channel interrupts, memory fault exceptions, and debug exceptions
+to all vector to __mri_exception_entry, as well (or to vector to functionality equivalent to
+__mri_exception_entry).  This is necessary to give the debugger control on asynchronous halt
+requests (Ctrl-C) from GDB, to trap faulting memory accesses made on behalf of MRI itself,
+and to give MRI control when a breakpoint happens.
+
+4) Analyze all non-static functions prefixed with "Platform_" in
 software/riscv-mri/mri_platform_freedom_metal.c, and either copy them verbatim, or re-implement
 the ones that don't fit your situation.  The following functions are likely directly portable to
 non-Freedom-Metal environments:
