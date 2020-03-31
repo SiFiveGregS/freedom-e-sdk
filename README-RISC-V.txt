@@ -40,6 +40,28 @@ might be the cleanest way.  For Freedom E SDK and Freedom Metal, it wasn't clear
 easily achieve that sort of structure, hence the pragmatic set of steps above.
 
 ******************************************************************************************
+How to connect RISC-V GDB to a target that has MRI installed
+******************************************************************************************
+
+Invoke GDB on the host machine as usual, then issue the "target remote" command, supplying
+the communication port that pertains to the I/O connection between the host and the target.
+For instance, if the I/O connection is a USB-to-serial link, then the command would look
+something like "target remote /dev/ttyUSB1".   If the I/O connection is via TCP/IP over
+Ethernet or wireless, the command would be something like "target remote 10.1.2.3:4444"
+(substitute the actual target IP address and the actual listening port number).  Note that
+for the integration of MRI with Freedom Metal, a TCP/IP link isn't implemented, just a
+USB-to-serial link, so the TCP/IP option would only apply to targets that specifically
+have been designed to use that transport, and where the MRI platform-specific stubs have
+been supplied that utilize TCP/IP transport (see section below about platform-specific stubs
+for non-Freedom-Metal environments).
+
+Once the appropriate "target remote" command has been issued in GDB, then GDB will attach
+to MRI on the target, and GDB will then have control over the target, until a subsequent
+"continue", "step", or "stepi" command cedes control to the (non-MRI) software running on
+the target.
+
+
+******************************************************************************************
 What would need to be done to adapt this software to a RISC-V software environment that is
 something other than Freedom Metal (e.g. an RTOS)?
 ******************************************************************************************
