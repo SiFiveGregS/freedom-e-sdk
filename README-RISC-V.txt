@@ -71,14 +71,28 @@ for that I/O channel to generate a high priority interrupt upon incoming transmi
 any code that runs as a result of any interrupt that runs at a higher priority than that of the
 debug I/O channel will not be debuggable in this arrangement.
 
-2) Supply an analogue for the assembly routines mri_exception_entry and mri_exception_exit that
-are in riscv_mri.S. The mri_exception_entry implementation should save off x1..x31, mepc, mcause,
+2) Reuse - or supply an analogue for - the assembly routines mri_exception_entry and mri_exception_exit
+that are in riscv_mri.S. The mri_exception_entry implementation should save off x1..x31, mepc, mcause,
 and mstatus, into __mriRiscVState, set the active flag in __mriRiscVState, and ultimately make a
 call to __mriDebugException which is part of MRI proper.  (Basically, do the equivalent of things
 that mri_exception_entry is doing). After __mriDebugException returns, mri_exception_exit should
 take the previously saved register values in __mriRiscVState, and place them back into the machine
 registers, before ultimately executing an MRET instruction to return control to the program being
 debugged.
+
+Before implementing your own version wholesale, consider re-using the existing
+implementation and replacing the following assembly line with an alternate jump target
+that makes sense for your environment (or replace the jump with additional inline code
+to fit your environment).
+
+	j __metal_original_exception_handler
+	
+Ultimately we want to call __mriDebugException, and then when that returns,
+to execute mri_exception_exit, so if, in your environment there's nothing else to do
+between the end of mri_exception_entry and the calling of __mriDebugException, then you
+could replace the "j __metal_original_exception_handler" with "jal __mriDebugException"
+and then when execution returns from __mriDebugException, it would fall through to
+mri_exception_exit which is where we want to end up anyway once MRI cedes control.
 
 3) Arrange for debug I/O channel interrupts, memory fault exceptions, and debug exceptions
 to all vector to __mri_exception_entry, as well (or to vector to functionality equivalent to
