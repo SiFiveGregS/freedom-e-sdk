@@ -1,25 +1,64 @@
 Notes on this RISC-V port
 -------------------------
 
+******************************************************************************************
+What is MRI?
+******************************************************************************************
+MRI stands for Monitor for Remote Inspection.  It exposes basic software-based
+debug functionality to a GDB using the GDB remote protocol.  It was written for
+ARM-based systems, but nothing precludes a port to RISC-V, and such a port is
+the purpose of this repository.
+
+See the file README.creole in the "mri" directory as an introduction to details
+on MRI.  It has additional pointers to other information as well.
+
+Usage in the RISC-V ecosystem assumes that the RISC-V processor does not have a
+Debug Module in hardware, for whatever reasons (severe silicon area contraints
+etc).  In general, having a Debug Module in the RISC-V hardware design provides
+superior debugging features and robustness, compared to using a software-based
+debug agent like MRI, however some RISC-V processor designs might not include a
+Debug Module, in which case a software debug agent such as MRI would be needed
+for basic debug using GDB.
+
+******************************************************************************************
+What is the structure of this source code?
+******************************************************************************************
+The Git repository consists of
+
+1) A fork of Freedom E-SDK (including Freedom Metal), as a build environment and bare
+metal API.  This consists of the top-level directory and all subdirectories except for
+"mri".
+
+2) A fork of upstream MRI (upstream has no RISC-V support) added as a Git
+submodule to the fork of Freedom E SDK.  In this repository setup, MRI consists
+of the file system tree rooted at "mri" under the top-level directory.
+
+The RISC-V port in this repository doesn't impose it's own structure, but rather is
+trying to utilize the two existing structures.
+
+******************************************************************************************
+How to build a RISC-V version of MRI that uses Freedom E-SDK as a build environment and
+uses Freedom Metal as an API to bare metal RISC-V based hardware system
+******************************************************************************************
+
 Currently the steps necessary to build are a bit wonky.  It's not a fully integrated build yet, and the build
 is specific to the combination of (1) RISC-V single core.  (2) Freedom E SDK and Freedom Metal as the bare metal
 environment (interrupt handler framework and I/O APIs). (3) UART I/O available on the Arty 100T.
 
 There are 3 general areas of code for this combination.
-1) MRI itself.  The source code is in the mri submodule.  We're
-building this as a static library, and then linking it in to main
-application outside of "mri".
-2) Freedom E SDK and Freedom Metal (the
-top-level freedom-e-sdk directory and all other subdirectories except
-"mri").  If you're using an RTOS, then it's possible that no code in
-Freedom E SDK or Freedom Metal would be applicable, and you'd just
-want to concentrate on getting the "mri" subdirectory to
-build/link/run with your RTOS environment.  The
-mri/notes/mri-porting.creole file is the information on porting MRI to
-a new board.  Also, link errors against your application are a pretty
-good hint showing which functions you need to supply.  The
-mri/architectures/riscv directory is intended to hold general RISC-V
-related functionality without being board-specific.
+
+1) MRI itself.  The source code is in the mri submodule.  We're building this as
+a static library, and then linking it in to main application outside of "mri".
+
+2) Freedom E SDK and Freedom Metal (the top-level freedom-e-sdk directory and
+all other subdirectories except "mri").  If you're using an RTOS, then it's
+possible that no code in Freedom E SDK or Freedom Metal would be applicable, and
+you'd just want to concentrate on getting the "mri" subdirectory to
+build/link/run with your RTOS environment.  The mri/notes/mri-porting.creole
+file is the information on porting MRI to a new board.  Also, link errors
+against your application are a pretty good hint showing which functions you need
+to supply.  The mri/architectures/riscv directory is intended to hold general
+RISC-V related functionality without being board-specific.
 
 For other bare metal APIs or RTOS, the "mri" submodule is the part that would still apply.  
 
@@ -38,6 +77,19 @@ For porting to other RISC-V boards, if it's easier to localize all the customiza
 under the mri subtree, under mri/architectures/riscv, mri/boards, and mri/devices, that
 might be the cleanest way.  For Freedom E SDK and Freedom Metal, it wasn't clear how to
 easily achieve that sort of structure, hence the pragmatic set of steps above.
+
+******************************************************************************************
+How to build a RISC-V version of MRI that DOES NOT use Freedom E-SDK as a build environment and
+Freedom Metal as an API to bare metal RISC-V based hardware system
+******************************************************************************************
+
+If you aren't using hardware that Freedom E SDK supports (e.g. if you aren't
+using an Arty 100T configured with a suitable RISC-V core), then the only
+portion that would be directly applicable to you is the "mri" subtree, and it is
+necessary to set up your own build system (which might involve hacking the mri
+makefile however is needed to suit your environment).  In that case, anything
+outside of the "mri" subtree is probably not applicable to you, except perhaps
+as a reference.
 
 ******************************************************************************************
 How to connect RISC-V GDB to a target that has MRI installed
